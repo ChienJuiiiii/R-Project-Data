@@ -1,0 +1,375 @@
+---
+title: "Guarding Against Mortgage Market Crisis: Detecting Anomalies and Learning from 2019 to Avoid a 2007 Repeat"
+author: Huang, Chien Jui
+format: html
+output: bookdown::html_document2
+toc: false
+editor: visual
+---
+
+```{=html}
+<!This block assists in formatting the title, font size, chart caption, etc.– –>
+<style type="text/css">
+  .title {
+    text-align: left;
+}
+body{ /* Normal  */
+      font-size: 16px;
+      margin: 2.5cm;
+      top: 1.5cm;
+      text-align: justify;
+  }
+  .caption {
+    font-size: big;
+    text-align: center;
+    position: above;
+}
+</style>
+```
+```{css plotly-caption, echo = FALSE}
+/*Include this block if you like the chart caption at the top instead of the bottom.*/
+div.figure {
+  display: table;
+}
+div.figure p {
+  display: table-caption;
+  caption-side: top;
+}
+```
+
+------------------------------------------------------------------------
+
+In 2007, the Subprime Mortgage Crisis triggered the collapse of pivotal financial institutions such as Lehman Brothers and Bear Stearns, accelerating a dramatic decline in housing market prices and leaving 26 million Americans unemployed. This upheaval deteriorated the U.S. economy into recession, and the general public typically attributed this catastrophe to "the malfunction of financial regulations." 
+
+As the stability of the mortgage market is a shared responsibility that extends to all members of society, the stakeholders of this report are not only the financial regulatory administration but also the U.S. citizens. Thus, this analysis aims to identify any deviations from expected patterns within the mortgage market, with a focus on key metrics including FICO score, original unpaid balance (UBP), debt-to-income ratio (DTI), and original interest rate. By detecting potential red flags promptly, proactive measures can be taken in advance to mitigate risks and fortify society's stability. 
+
+Firstly, the FICO scores are classified into five levels for simplicity and analysis: Excellent (800-850), Very good (740-799), Good (670-739), Fair (580-669), and Very poor (300-579). Comparing default rates between 2007 and 2019, based on FICO score classification (see Figure \@ref(fig:stack-bar-chart)), revealed insights. The 100% stacked bar charts depict that approximately 23% of borrowers with Very poor FICO scores defaulted in 2007, the highest among all classifications. Notably, default rates for Excellent and Very good scores ranged from 5-8%, indicating waning lender confidence in the overall economy. However, the 2019 default rates revealed a positive trend: there were no mortgage loans extended to borrowers classified as Very poor, signaling cautious lending practices under strict regulatory oversight. Nevertheless, to ensure the market health and mitigate sudden spikes in default rates, further examination delves into UPB and DTI based on borrower occupation in the subsequent section. 
+
+To ensure comparability between the 2007 and 2019 mortgage markets, the analysis incorporates the inflation rate. According to U.S. inflation data, it is approximately 23%. This measure is utilized to adjust the 2019 UPB back to 2007, facilitating the observation of any similarities in the mortgage loan structure over time. As shown in Figure \@ref(fig:scatter-plot), in 2019, the majority of borrowers were classified as principal owners (for personal living purposes), represented by the light blue dots. However, a moderate proportion of investors was also shown displayed by the red dots. Given that investors seek profit and may exhibit instability in holding properties, they can significantly impact the overall housing market compared to principal owners. Consequently, a deeper analysis of their financial status is warranted. 
+
+DTI requirements by loan classify borrowers into three risky types: Ideal (\<36%), Good (36% \< DTI \< 43%), and Risky (\>43%). Analysis of the 2019 situation revealed that while the majority of UPBs for investment properties were relatively low, a proportion of investors had DTIs exceeding 43%. This raised a warning sign that they might face financial burdens, potentially leading to sudden selling off of properties in the future. Such impacts could cause fluctuations in the housing market and have economic implications. To mitigate these potential negative outcomes, the subsequent analysis focuses on identifying the financial institutions providing these risky loans so that the stricter loan requirements could be redefined for stabilizing the mortgage market. 
+
+By examining the original interest rate distribution across various financial institutions in 2019 (see Figure \@ref(fig:box-plot)), it becomes apparent that certain institutions are more appealing indicated by the grey scatter dots positioned closer to the box. Notably, the intensity of dots for "Other" and "PennyMac Corp." suggests that these two are particularly popular among investors. This preference could be attributed to the reason that, regardless of investors' financial statuses, these institutions offer relatively favorable and normal interest rates, proven by their approximate normal distributions. However, despite their popularity, "Other" and "PennyMac Corp." face a higher probability of encountering financial crises in the event of investor defaults. Consequently, the final phase of analysis will focus on assessing the cumulative UPB associated with 75% quantile of the institution number ranking by the highest number of lending cases and evaluating their geographical clusters. 
+
+From the geographical distribution of the six popular institutions in 2019 (refer to Figure \@ref(fig:patchwork-maps)), a predominant concentration of investment activities emerges in California. Particularly noteworthy is the UPB amount lent by "Other" financial institutions to investors, reaching an astonishing \$50 million in CA alone. A comprehensive summary of "Other" financial institutions across states is provided in Figure \@ref(fig:interactive-chart). Given the substantial magnitude of this investment lending activity and the challenges associated with monitoring these relatively unknown financial entities, it becomes imperative for national financial regulatory bodies to rigorously scrutinize these institutions. Reevaluation of their financial statements is essential to preempt any potential chain effects akin to those observed during the 2007 Mortgage Crisis.
+
+(Word count: 783)
+
+<br>
+
+### Figure Appendix {.unnumbered}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r load pacakge, include = FALSE}
+library(tidyverse)
+library(GGally)
+library(scales)
+library(stringr)
+library(bookdown) 
+library(tidyverse)
+library(zoo)
+library(patchwork)
+library(usmap)
+library(plotly)
+library(ggiraph)
+library(covidcast)
+```
+
+```{r load data, include = FALSE}
+setwd("C:/Users/hgoce/OneDrive/桌面/桌面資料/碩士/UMD/Course/2ed semester/Data Visualization and Web Analytics/Midterm/Data/")
+ds_2007Q4 <- read_rds("data_sample_2007Q4.rds")
+ds_2019Q4 <- read_rds("data_sample_2019Q4.rds")
+df_rate <- read_csv("default_rate_ts.csv")
+```
+
+```{r clean data ds_2007Q4, include = FALSE}
+ds_2007Q4 <- ds_2007Q4 %>%
+  filter(!is.na(CSCORE_B)) %>%
+  mutate(YEAR = 2007,
+         CHANNEL = as.factor(CHANNEL),
+         SELLER = str_replace(SELLER, ", N.A.", ""),
+         SELLER = str_replace(SELLER, "Llc", "LLC"),
+         SELLER = str_replace(SELLER, "Jpmorgan Chase Bank, National Association",
+                              "JPMorgan Chase Bank, National Association"),
+         SELLER = str_replace(SELLER, "Gmac Mortgage, LLC", "GMAC Mortgage, LLC"),
+         SELLER = str_replace(SELLER, "Bank Of America", "Bank of America"),
+         SELLER = str_replace(SELLER, "Pnc Bank", "PNC Bank"),
+         SELLER = str_replace(SELLER, "Fdic, Receiver, Indymac Federal Bank Fsb",
+                              "FDIC, Receiver, IndyMac Federal Bank FSB"),
+         SELLER = str_replace(SELLER, "Citimortgage, Inc.", "CitiMortgage, Inc."),
+         SELLER = str_replace(SELLER, "Amtrust Bank", "AmTrust Bank"),
+         SELLER = str_replace(SELLER, "Hsbc Bank Usa, National Association",
+                              "HSBC Bank USA, National Association"),
+         SELLER = str_replace(SELLER, "Truist Bank .*SunTrust Bank\\)", "Truist Bank"),
+         SELLER = as.factor(SELLER),
+         OCLTV = ifelse(is.na(OCLTV), 73.16, OCLTV),
+         NUM_BO = as.factor(ifelse(NUM_BO %in% c(1,2,3,4,10), NUM_BO, 2)),
+         DTI = ifelse(is.na(DTI), 0, DTI),
+         FIRST_FLAG = as.factor(ifelse(FIRST_FLAG == "", "N", FIRST_FLAG)),
+         PURPOSE = as.factor(PURPOSE),
+         OCC_STAT = as.factor(OCC_STAT),
+         DEFAULT_FLAG = as.factor(DEFAULT_FLAG),
+         MI_PCT = ifelse(is.na(MI_PCT), 0, MI_PCT),
+         FICO_RANGE = as.factor(case_when(
+           CSCORE_B >= 800 ~ "Excellent",
+           CSCORE_B >= 740 ~ "Very good",
+           CSCORE_B >= 670 ~ "Good",
+           CSCORE_B >= 580 ~ "Fair",
+           TRUE ~ "Very poor")))
+```
+
+```{r clean data ds_2019Q4, include = FALSE}
+ds_2019Q4 <- ds_2019Q4 %>%
+  filter(!is.na(CSCORE_B)) %>%
+  mutate(YEAR = 2019,
+         CHANNEL = as.factor(CHANNEL),
+         SELLER = str_replace(SELLER, ", N.A.", ""),
+         SELLER = str_replace(SELLER, "Truist Bank .*SunTrust Bank\\)", "Truist Bank"),
+         SELLER = ifelse(SELLER == "United Shore Financial Services, LLC dba United Wholesale Mortgage",
+                         "United Wholesale Mortgage, LLC", SELLER),
+         SELLER = as.factor(SELLER),
+         NUM_BO = as.factor(NUM_BO),
+         DTI = ifelse(is.na(DTI), 0, DTI),
+         FIRST_FLAG = as.factor(FIRST_FLAG),
+         PURPOSE = as.factor(PURPOSE),
+         OCC_STAT = as.factor(OCC_STAT),
+         MI_PCT = ifelse(is.na(MI_PCT), 0, MI_PCT),
+         DEFAULT_FLAG = as.factor(DEFAULT_FLAG),
+         FICO_RANGE = as.factor(case_when(
+           CSCORE_B >= 800 ~ "Excellent",
+           CSCORE_B >= 740 ~ "Very good",
+           CSCORE_B >= 670 ~ "Good",
+           CSCORE_B >= 580 ~ "Fair",
+           TRUE ~ "Very poor")))
+```
+
+```{r merge data, include = FALSE}
+ds_all <- rbind(ds_2007Q4, ds_2019Q4)
+```
+
+```{r stack-bar-chart, echo = FALSE, fig.width = 12, fig.height = 6, fig.cap="Mortgage Market: Default Trends Between 2007 and 2019"}
+# This is the code block for producing charts. 
+# You can include as many of these blocks as needed. 
+# By adding "echo = FALSE," only the chart and not the code will be included in the output HTML file.
+# To modify the size of your chart, adjust the values of fig.width and fig.height.
+# Use fig.cap to specify the caption for your chart.
+# You can insert a blank line between charts by adding "<br>" below the block.
+bar_chart <- ds_all %>%
+  group_by(YEAR, FICO_RANGE, DEFAULT_FLAG) %>%
+  summarise(Frequency_FICO = n()) %>%
+  ungroup() %>%
+  group_by(YEAR, FICO_RANGE) %>%
+  mutate(FREQUENCY = sum(Frequency_FICO)) %>%
+  ungroup() %>%
+  mutate(percentage = Frequency_FICO/FREQUENCY)
+  
+
+bar_chart %>%
+  mutate(FICO_RANGE = factor(FICO_RANGE, levels = c("Very poor", "Fair", "Good", "Very good", "Excellent"))) %>%
+  ggplot(aes(x = FICO_RANGE, y = percentage * 100, fill = factor(DEFAULT_FLAG))) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  facet_wrap(~YEAR) +
+  labs(x = "FICO level", y = "Percentage",
+       caption = "Data provided by Fannie Mae") +
+  scale_fill_manual(values = c("0" = "royalblue", "1" = "#FFB90F"),
+                    breaks = c("0", "1"),
+                    labels = c("Paid on time", "Default")) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t = 10)),
+        axis.title.y = element_text(size = 14, margin = margin(t = 10, r = 10, b = 10, l = 10)),
+        axis.ticks = element_blank(),
+        legend.text = element_text(size = 14),
+        legend.position = "top",  # Move the legend to the top
+        legend.title = element_blank(),  # Remove the legend title
+        plot.caption = element_text(face = "italic", size = 12),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(color = "grey90"),
+        strip.text = element_text(size = 14)) +
+  scale_y_continuous(labels = percent_format(), expand = c(0,0))
+```
+
+```{r scatter-plot, echo = FALSE, fig.width=12, fig.height = 6, fig.cap="Mortgage Market Structures: Unveiling Risk Patterns through UPS and DTI"}
+scatter_plot <- ds_all %>%
+  mutate(ORIG_UPB = ifelse(YEAR == 2019, ORIG_UPB * 0.77, ORIG_UPB),
+         OCC_STAT = case_when(
+           OCC_STAT == "P" ~ "Principal",
+           OCC_STAT == "S" ~ "Second",
+           OCC_STAT == "I" ~ "Investor",
+           TRUE ~ "Unknown"))
+
+scatter_plot <- scatter_plot %>%
+  mutate(factor(OCC_STAT, levels = c("Principal", "Second", "Investor"))) %>%
+  ggplot(aes(x = DTI, y = log(ORIG_UPB), color = OCC_STAT)) +
+  geom_point(alpha = 0.2) +
+  facet_wrap(~YEAR) +
+  scale_color_manual(values = c("Principal" = "skyblue", "Second" = "#FFB90F",
+                                "Investor" = "red2", "Unknown" = "black")) +
+  geom_vline(xintercept = 36, linetype = "dashed", color = "black") +
+  geom_text(x = 33, y = log(900000), label = 'Ideal', size=4, col = 'black') +
+  geom_vline(xintercept = 43, linetype = "dashed", color = "black") +
+  geom_text(x = 39, y = log(900000), label = 'Good', size=4, col = 'black') +
+  geom_text(x = 46, y = log(900000), label = 'Risky', size=4, col = 'black') +
+  labs(x = "Debt to income ratio", y = 'Unpaid principal balance (logarithm)',
+       color = "Occupancy status",
+       caption = "Data provided by Fannie Mae") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t = 10)),
+        axis.title.y = element_text(size = 14, margin = margin(t = 10, r = 10, b = 10, l = 10)),
+        axis.ticks = element_blank(),
+        legend.text = element_text(size = 14),
+        legend.position = "top",
+        plot.caption = element_text(face = "italic", size = 12),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(color = "grey90"),
+        strip.text = element_text(size = 14)) +
+  scale_x_continuous(labels = percent_format(scale = 1), breaks = seq(0, 100, by = 10))
+scatter_plot
+```
+
+```{r box-plot, echo = FALSE, fig.width=12, fig.height = 10, fig.cap="Mortgage Seller Popularity: Interest Rate Diversity Across Financial Institutions"}
+ds_2019Q4_DTI_risk <- ds_2019Q4 %>%
+  filter(DTI >= 43 & OCC_STAT == "I")
+ds_2019Q4_DTI_risk$SELLER <- factor(ds_2019Q4_DTI_risk$SELLER, levels = rev(levels(ds_2019Q4_DTI_risk$SELLER)))
+
+boxplot <- ds_2019Q4_DTI_risk %>%
+  ggplot(aes(x = ORIG_RATE, y = SELLER, group = SELLER)) +
+  geom_jitter(width = 0.1, size = 2, color = "grey70", alpha = 0.2, stroke = NA, size = 2) +
+  geom_boxplot(aes(fill = SELLER), alpha = 0.3, outlier.color = NA) +
+  labs(x = "Original interest rate", y = "", caption = "Data provided by Fannie Mae") +
+  theme_classic() +
+  theme(axis.text = element_text(size = 14),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_text(size = 14),
+        plot.caption = element_text(face = "italic", size = 12),
+        panel.grid.major.x = element_line(color = "grey90")) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_manual(values = c("Other" = "lightskyblue",
+                               "PennyMac Corp." = "lightskyblue",
+                               "Wells Fargo Bank" = "lightskyblue",
+                               "Rocket Mortgage, LLC" = "lightskyblue",
+                               "Caliber Home Loans, Inc." = "lightskyblue",
+                               "United Wholesale Mortgage, LLC" = "lightskyblue")) +
+  guides(fill = FALSE)
+
+boxplot
+```
+
+```{r find 75% quantile of popular financial institutions among investors, include = FALSE}
+ds_2019Q4_3qt <- ds_2019Q4 %>%
+  filter(OCC_STAT == "I") %>%
+  group_by(SELLER) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+```
+
+```{r map-chart, include = FALSE}
+ds_2019Q4_map <- ds_2019Q4 %>%
+  filter(OCC_STAT == "I") %>%
+  group_by(SELLER) %>%
+  mutate(BANK_NUMBER = n()) %>%
+  ungroup() %>%
+  filter(BANK_NUMBER >= 60) %>%
+  arrange(SELLER) %>%
+  group_by(STATE, SELLER) %>%
+  summarize(TOTAL_UBP = sum(ORIG_UPB)/1e6) %>%
+  ungroup() %>%
+  pivot_wider(names_from = SELLER, values_from = TOTAL_UBP, values_fill = 0) %>%
+  rename(state = STATE)
+
+Other_Bank <- plot_usmap(regions = "state", data = ds_2019Q4_map, 
+                         values = "Other", color = "white") + 
+  scale_fill_continuous(name="Cumulative UPB ($M)", 
+                        low = "ivory1", high = "ivory4")+
+  labs(title = "Other financial institutions") + 
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm'))
+
+PennyMac_Corp <- plot_usmap(regions = "state", data = ds_2019Q4_map, 
+                         values = "PennyMac Corp.", color = "white") + 
+  scale_fill_continuous(name="Cumulative UPB ($M)", 
+                        low = "plum1", high = "violetred3")+
+  labs(title = "PennyMac Corp.") + 
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm'))
+
+Wells_Fargo_Bank <- plot_usmap(regions = "state", data = ds_2019Q4_map, 
+                         values = "Wells Fargo Bank", color = "white") + 
+  scale_fill_continuous(name="Cumulative UPB ($M)", 
+                        low = "gold1", high = "gold4")+
+  labs(title = "Wells Fargo Bank") + 
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm'))
+
+United_Wholesale_Mortgage_LLC <- plot_usmap(regions = "state", data = ds_2019Q4_map, 
+                         values = "United Wholesale Mortgage, LLC", color = "white") + 
+  scale_fill_continuous(name="Cumulative UPB ($M)", 
+                        low = "wheat", high = "darkorange")+
+  labs(title = "United Wholesale Mortgage") + 
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm'))
+
+Rocket_Mortgage_LLC <- plot_usmap(regions = "state", data = ds_2019Q4_map, 
+                         values = "Rocket Mortgage, LLC", color = "white") + 
+  scale_fill_continuous(name="Cumulative UPB ($M)", 
+                        low = "palegreen1", high = "palegreen4")+
+  labs(title = "Rocket Mortgage") + 
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm'))
+
+Caliber_Home_Loans_Inc <- plot_usmap(regions = "state", data = ds_2019Q4_map, 
+                         values = "Caliber Home Loans, Inc.", color = "white") + 
+  scale_fill_continuous(name="Cumulative UPB ($M)", 
+                        low = "darkslategray1", high = "darkslategray4")+
+  labs(title = "Caliber Home Loans") + 
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm'))
+```
+
+```{r patchwork-maps, echo = FALSE, fig.width=12, fig.height = 6, fig.cap="Mapping the Mortgage Market: Investor Clusters and Statewide Investment Insights"}
+Other_Bank + PennyMac_Corp + Wells_Fargo_Bank + Rocket_Mortgage_LLC + Caliber_Home_Loans_Inc + United_Wholesale_Mortgage_LLC
+```
+
+```{r interactive-chart, echo = FALSE, fig.width=12, fig.height = 4, fig.cap="A Comprehensive Summary of Other Financial Institutions"}
+ds_2019Q4_other_interact <- ds_2019Q4 %>%
+  filter(SELLER == "Other") %>%
+  rename(state = STATE) %>%
+  group_by(state) %>%
+  summarise(median_FICO = median(CSCORE_B, na.rm = TRUE),
+            median_UPB = median(ORIG_UPB/1e3, na.rm = TRUE),
+            median_interest_rate = median(OLTV, na.rm = TRUE),
+            median_DTI = median(DTI, na.rm = TRUE))
+
+ds_2019Q4_other_interact <- ds_2019Q4_other_interact %>%
+  mutate(label = paste("State:", state, "\n",
+                       "All metrics are median", "\n",
+                       "FICO score:", median_FICO, "\n",
+                       "UPB($k):", median_UPB, "\n",
+                       "Interest rate:", median_interest_rate, "%", "\n",
+                       "DTI: ", median_DTI, "%"
+                       ))
+ds_2019Q4_other_interact <- as.data.frame(ds_2019Q4_other_interact)
+
+interact <- plot_usmap(regions = "states", data = ds_2019Q4_other_interact, values = "median_UPB" ,color = "white") + 
+  scale_fill_continuous(name="Median UPB($k)", 
+                        low = "ivory1", high = "ivory4")+
+  theme(plot.title = element_text(size=10,hjust=0.5),
+        legend.position = "right",legend.key.size = unit(0.3, 'cm')) +
+  aes(text = label)
+
+subplot(ggplotly(interact, tooltip = c('label')))
+```
+
+<br>
+
+Reference
+
+Dieker, N. (n.d.). What is considered an excellent credit score? Bankrate. Retrieved from <https://www.bankrate.com/personal-finance/credit/what-is-excellent-credit-score/>
+
+Martin, E. J. (n.d.). What is a good debt-to-income ratio for a mortgage? The Mortgage Reports. Retrieved from <https://themortgagereports.com/74854/good-debt-to-income-ratio-for-mortgage>
+
+"\$1 in 2007 → 2024 \| Inflation Calculator." Official Inflation Data, Alioth Finance, 13 Mar. 2024, <https://www.officialdata.org/us/inflation/2007?amount=1>
